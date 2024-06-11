@@ -54,11 +54,17 @@ class TrafficLight(models.Model):
     def __str__(self):
         return f"Traffic Light {self.id} at {self.intersection.name}"
 
+from django.utils import timezone
 
 class TrafficFlow(models.Model):
-    laneGroup = models.ForeignKey(LaneGroup, on_delete=models.CASCADE,null=True)
+    laneGroup = models.ForeignKey(LaneGroup, on_delete=models.CASCADE, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)
     vehicleCount = models.IntegerField()
 
     def __str__(self):
-        return f'{self.intersection} - {self.lane_group} - {self.timestamp} - {self.vehicle_count}'
+        return f'{self.laneGroup.intersection} - {self.laneGroup} - {self.timestamp} - {self.vehicleCount}'
+
+    def save(self, *args, **kwargs):
+        if self.timestamp and not self.timestamp.tzinfo:
+            self.timestamp = timezone.make_aware(self.timestamp, timezone.get_current_timezone())
+        super(TrafficFlow, self).save(*args, **kwargs)
