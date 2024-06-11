@@ -4,8 +4,6 @@ from .views import calculate_pressure_simulated
 from .models import Intersection
 
 
-
-
 def update_traffic_lights_simulated():
     from django.test import RequestFactory
     factory = RequestFactory()

@@ -394,13 +394,17 @@ def average_vehicle_per_day_report(request):
 
     return JsonResponse(response_data)
 
-
+import logging
 import random
 from django.shortcuts import get_object_or_404
 from .traffic_control import calculate_green_time, calculate_red_time
+logger = logging.getLogger(__name__)
+
 
 def calculate_pressure_simulated(request, intersection_id):
     try:
+        logger.info(f"Calculating pressure for intersection {intersection_id}")
+
         # Obtener los datos de la API de vehículos entrantes y salientes
         intersection = get_object_or_404(Intersection, id=intersection_id)
         lane_groups = LaneGroup.objects.filter(intersection=intersection)
@@ -452,8 +456,10 @@ def calculate_pressure_simulated(request, intersection_id):
                 light.greenTime = green_times[1]
                 light.redTime = red_times[1]  # Inverso del tiempo verde
                 light.pressure_status="low"
-
             light.save()
+
+        logger.info(f"Updated traffic lights for intersection {intersection_id}")
+
 
         response_data = {
             'intersection_id': intersection.id,
@@ -473,6 +479,8 @@ def calculate_pressure_simulated(request, intersection_id):
         return JsonResponse(response_data)
 
     except Exception as e:
+        logger.error(f"Error calculating pressure for intersection {intersection_id}: {e}", exc_info=True)
+
         return JsonResponse({'error': str(e)}, status=500)
     
 
