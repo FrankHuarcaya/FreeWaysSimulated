@@ -325,35 +325,25 @@ class TrafficPredicctionAPI(APIView):
 
 
 
-from django.shortcuts import get_object_or_404
+from django.shortcuts import render
 from django.http import JsonResponse
-from .models import TrafficFlow, Intersection
+from .models import TrafficFlow
 from datetime import datetime, timedelta
-from django.utils import timezone
 
 def traffic_flow_report(request, intersection_name):
     # Obtener la intersección por nombre
     intersection = get_object_or_404(Intersection, name=intersection_name)
     
-    # Obtener la fecha actual con zona horaria
-    end_date = timezone.now()
-    # Obtener la fecha de hace 7 días con zona horaria
-    start_date = end_date - timedelta(days=7)
-
-    # Obtener la zona horaria actual
-    current_tz = timezone.get_current_timezone()
-    
-    # Filtrar registros de TrafficFlow para los últimos 7 días y la intersección específica
+    # Filtrar registros de TrafficFlow para la intersección específica
     traffic_flows = TrafficFlow.objects.filter(
-        timestamp__range=(start_date, end_date),
         laneGroup__intersection=intersection
     )
     
     # Procesar los datos para agruparlos por día y hora
     report_data = {}
     for flow in traffic_flows:
-        date_key = flow.timestamp.astimezone(current_tz).strftime('%Y-%m-%d')
-        hour_key = flow.timestamp.astimezone(current_tz).strftime('%H:00')
+        date_key = flow.timestamp.strftime('%Y-%m-%d')
+        hour_key = flow.timestamp.strftime('%H:00')
         
         if date_key not in report_data:
             report_data[date_key] = {}
