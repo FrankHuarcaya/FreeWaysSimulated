@@ -369,11 +369,19 @@ def traffic_flow_report(request, intersection_name):
     return JsonResponse(report_data)
 
 
+from django.shortcuts import get_object_or_404
 from django.db.models import Avg
+from .models import TrafficFlow, Intersection
+from django.http import JsonResponse
 
-def average_vehicle_per_day_report(request):
-    # Obtener el promedio de vehículos agrupado por día
-    daily_avg = TrafficFlow.objects.extra({'day': "date(timestamp)"}).values('day').annotate(avg_vehicle_count=Avg('vehicleCount')).order_by('day')
+def average_vehicle_per_day_report(request, intersection_name):
+    # Obtener la intersección por nombre
+    intersection = get_object_or_404(Intersection, name=intersection_name)
+    
+    # Filtrar registros de TrafficFlow para la intersección específica
+    daily_avg = TrafficFlow.objects.filter(
+        laneGroup__intersection=intersection
+    ).extra({'day': "date(timestamp)"}).values('day').annotate(avg_vehicle_count=Avg('vehicleCount')).order_by('day')
 
     # Crear una lista con los promedios por día
     final_daily_avg = [{'day': entry['day'], 'average': entry['avg_vehicle_count']} for entry in daily_avg]

@@ -23,7 +23,7 @@ urlpatterns = [
 
  
     path('traffic-flow-report/<str:intersection_name>/', traffic_flow_report, name='traffic-flow-report'),
-    path('average-vehicle-per-day-report/', views.average_vehicle_per_day_report, name='average-vehicle-per-day-report'),
+    path('average-vehicle-per-day-report/<str:intersection_name>/', views.average_vehicle_per_day_report, name='average_vehicle_per_day_report'),
     path('calculate_pressure_simulated/<int:intersection_id>/', calculate_pressure_simulated, name='calculate_pressure_simulated'),
 
 ]
