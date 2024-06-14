@@ -293,9 +293,7 @@ import numpy as np
 import os 
 from tensorflow import keras
 class TrafficPredicctionAPI(APIView):
-    permission_classes = [IsAuthenticated,IsAdminUser]
 
-    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         model_path = os.path.join('operation', 'models', '2-intersection.keras')
