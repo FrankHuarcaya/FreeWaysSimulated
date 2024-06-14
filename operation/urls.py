@@ -1,6 +1,6 @@
 # operation/urls.py
 from django.urls import path
-from .views import calculate_pressure_simulated,average_vehicle_per_day_report,traffic_flow_report,TrafficLightApi,AvenueApi,IntersectionApi,LaneGroupApi, TrafficPredicctionAPI,TrafficFlowApi
+from .views import calculate_pressure_simulated,AverageVehiclePerDayReport,TrafficFlowReport,TrafficLightApi,AvenueApi,IntersectionApi,LaneGroupApi, TrafficPredicctionAPI,TrafficFlowApi
 from . import views
 
 
@@ -22,8 +22,8 @@ urlpatterns = [
     path('lane-group/<int:id>/', LaneGroupApi.as_view(), name='lane_group_detail'),
 
  
-    path('traffic-flow-report/<str:intersection_name>/', traffic_flow_report, name='traffic-flow-report'),
-    path('average-vehicle-per-day-report/<str:intersection_name>/', views.average_vehicle_per_day_report, name='average_vehicle_per_day_report'),
+    path('traffic-flow-report/<str:intersection_name>/', TrafficFlowReport.as_view(), name='traffic_flow_report'),
+    path('average-vehicle-per-day-report/<str:intersection_name>/', AverageVehiclePerDayReport.as_view(), name='average_vehicle_per_day_report'),
     path('calculate_pressure_simulated/<int:intersection_id>/', calculate_pressure_simulated, name='calculate_pressure_simulated'),
 
 ]

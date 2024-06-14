@@ -9,12 +9,11 @@ from django.http import JsonResponse
 from .serializers import TrafficFlowReadSerializer,TrafficFlowWriteSerializer,TrafficLightReadSerializer,TrafficLightWriteSerializer,AvenueSerializer,IntersectionSerializer,LaneGroupWriteSerializer,LaneGroupReadSerializer
 from .models import TrafficLight
 from operation.models import TrafficLight,Avenue,Intersection,LaneGroup,TrafficFlow
-from security.permissions import IsAdminUser, IsMonitorUser, IsAnalystUser
+from security.permissions import IsAdminUser, IsMonitorUser, IsAnalystUser,IsAdminOrMonitorOrAnalyst,IsAdminOrAnalyst
 
 # traffic/views.py
 
 from django.http import JsonResponse
-
 
 
 class TrafficLightApi(APIView):
@@ -22,7 +21,7 @@ class TrafficLightApi(APIView):
 
     def get_permissions(self):
         if self.request.method == 'GET':
-            self.permission_classes = [IsAuthenticated, IsAdminUser]
+            self.permission_classes = [IsAuthenticated, IsAdminOrMonitorOrAnalyst]
         elif self.request.method == 'POST':
             self.permission_classes = [IsAuthenticated, IsAdminUser]
         elif self.request.method == 'PUT':
@@ -71,7 +70,7 @@ class AvenueApi(APIView):
 
     def get_permissions(self):
         if self.request.method == 'GET':
-            self.permission_classes = [IsAuthenticated, IsAdminUser]
+            self.permission_classes = [IsAuthenticated, IsAdminOrMonitorOrAnalyst]
         elif self.request.method == 'POST':
             self.permission_classes = [IsAuthenticated, IsAdminUser]
         elif self.request.method == 'PUT':
@@ -121,7 +120,7 @@ class IntersectionApi(APIView):
     
     def get_permissions(self):
         if self.request.method == 'GET':
-            self.permission_classes = [IsAuthenticated, IsAdminUser]
+            self.permission_classes = [IsAuthenticated, IsAdminOrMonitorOrAnalyst]
         elif self.request.method == 'POST':
             self.permission_classes = [IsAuthenticated, IsAdminUser]
         elif self.request.method == 'PUT':
@@ -169,7 +168,7 @@ class LaneGroupApi(APIView):
     
     def get_permissions(self):
         if self.request.method == 'GET':
-            self.permission_classes = [IsAuthenticated, IsAdminUser]
+            self.permission_classes = [IsAuthenticated, IsAdminOrMonitorOrAnalyst]
         elif self.request.method == 'POST':
             self.permission_classes = [IsAuthenticated, IsAdminUser]
         elif self.request.method == 'PUT':
@@ -231,7 +230,7 @@ class TrafficFlowApi(APIView):
     
     def get_permissions(self):
         if self.request.method == 'GET':
-            self.permission_classes = [IsAuthenticated, IsAdminUser]
+            self.permission_classes = [IsAuthenticated, IsAdminOrMonitorOrAnalyst]
         elif self.request.method == 'POST':
             self.permission_classes = [IsAuthenticated, IsAdminUser]
         elif self.request.method == 'PUT':
@@ -328,43 +327,43 @@ from django.http import JsonResponse
 from .models import TrafficFlow
 from datetime import datetime, timedelta
 
-def traffic_flow_report(request, intersection_name):
-    # Obtener la intersección por nombre
-    intersection = get_object_or_404(Intersection, name=intersection_name)
-    
-    # Filtrar registros de TrafficFlow para la intersección específica
-    traffic_flows = TrafficFlow.objects.filter(
-        laneGroup__intersection=intersection
-    )
-    
-    # Procesar los datos para agruparlos por día y hora
-    report_data = {}
-    for flow in traffic_flows:
-        date_key = flow.timestamp.strftime('%Y-%m-%d')
-        hour_key = flow.timestamp.strftime('%H:00')
+class TrafficFlowReport(APIView):
+    permission_classes = [IsAuthenticated,IsAdminOrAnalyst]  # Agregar permisos según sea necesario
+
+    def get(self, request, intersection_name):
+        intersection = get_object_or_404(Intersection, name=intersection_name)
+        traffic_flows = TrafficFlow.objects.filter(laneGroup__intersection=intersection)
+
+        report_data = self.process_traffic_flows(traffic_flows)
+        return Response(report_data)
+
+    def process_traffic_flows(self, traffic_flows):
+        report_data = {}
+        for flow in traffic_flows:
+            date_key = flow.timestamp.strftime('%Y-%m-%d')
+            hour_key = flow.timestamp.strftime('%H:00')
+
+            if date_key not in report_data:
+                report_data[date_key] = {}
+            if hour_key not in report_data[date_key]:
+                report_data[date_key][hour_key] = []
+
+            report_data[date_key][hour_key].append(flow.vehicleCount)
+
+        # Processar los datos para determinar los patrones de tráfico
+        for date_key in report_data:
+            for hour_key in report_data[date_key]:
+                avg_vehicle_count = sum(report_data[date_key][hour_key]) / len(report_data[date_key][hour_key])
+                if avg_vehicle_count < 100:
+                    pattern = 'Leve'
+                elif avg_vehicle_count < 150:
+                    pattern = 'Moderado'
+                else:
+                    pattern = 'Saturado'
+                
+                report_data[date_key][hour_key] = pattern
         
-        if date_key not in report_data:
-            report_data[date_key] = {}
-        
-        if hour_key not in report_data[date_key]:
-            report_data[date_key][hour_key] = []
-        
-        report_data[date_key][hour_key].append(flow.vehicleCount)
-    
-    # Agregar lógica para determinar los patrones de tráfico (leve, moderado, saturado)
-    for date_key in report_data:
-        for hour_key in report_data[date_key]:
-            avg_vehicle_count = sum(report_data[date_key][hour_key]) / len(report_data[date_key][hour_key])
-            if avg_vehicle_count < 100:
-                pattern = 'Leve'
-            elif avg_vehicle_count < 150:
-                pattern = 'Moderado'
-            else:
-                pattern = 'Saturado'
-            
-            report_data[date_key][hour_key] = pattern
-    
-    return JsonResponse(report_data)
+        return report_data
 
 
 from django.shortcuts import get_object_or_404
@@ -372,23 +371,25 @@ from django.db.models import Avg
 from .models import TrafficFlow, Intersection
 from django.http import JsonResponse
 
-def average_vehicle_per_day_report(request, intersection_name):
-    # Obtener la intersección por nombre
-    intersection = get_object_or_404(Intersection, name=intersection_name)
+class AverageVehiclePerDayReport(APIView):
+    # Asigna permisos generales a la vista
+    permission_classes = [IsAuthenticated, IsAdminOrAnalyst]
+
+    def get(self, request, intersection_name):
+        # Obtener la intersección por nombre
+        intersection = get_object_or_404(Intersection, name=intersection_name)
+        
+        # Filtrar registros de TrafficFlow para la intersección específica
+        daily_avg = TrafficFlow.objects.filter(
+            laneGroup__intersection=intersection
+        ).extra({'day': "date(timestamp)"}).values('day').annotate(avg_vehicle_count=Avg('vehicleCount')).order_by('day')
+
+        # Crear una lista con los promedios por día
+        final_daily_avg = [{'day': entry['day'], 'average': entry['avg_vehicle_count']} for entry in daily_avg]
+
+        # Devolver los datos en formato JSON
+        return Response({'average_vehicle_per_day': final_daily_avg})
     
-    # Filtrar registros de TrafficFlow para la intersección específica
-    daily_avg = TrafficFlow.objects.filter(
-        laneGroup__intersection=intersection
-    ).extra({'day': "date(timestamp)"}).values('day').annotate(avg_vehicle_count=Avg('vehicleCount')).order_by('day')
-
-    # Crear una lista con los promedios por día
-    final_daily_avg = [{'day': entry['day'], 'average': entry['avg_vehicle_count']} for entry in daily_avg]
-
-    response_data = {
-        'average_vehicle_per_day': final_daily_avg
-    }
-
-    return JsonResponse(response_data)
 
 import logging
 import random
