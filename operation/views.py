@@ -232,11 +232,11 @@ class TrafficFlowApi(APIView):
         if self.request.method == 'GET':
             self.permission_classes = [IsAuthenticated, IsAdminOrMonitorOrAnalyst]
         elif self.request.method == 'POST':
-            self.permission_classes = [IsAuthenticated, IsAdminUser]
+            self.permission_classes = [IsAuthenticated, IsAdminOrAnalyst]
         elif self.request.method == 'PUT':
-            self.permission_classes = [IsAuthenticated, IsAdminUser]
+            self.permission_classes = [IsAuthenticated, IsAdminOrAnalyst]
         elif self.request.method == 'DELETE':
-            self.permission_classes = [IsAuthenticated, IsAdminUser]
+            self.permission_classes = [IsAuthenticated, IsAdminOrAnalyst]
         return super(TrafficFlowApi, self).get_permissions()
 
     def get(self, request, id=0):
